@@ -111,6 +111,8 @@ html,body{height:100%;font-family:var(--ff-body);background:var(--bg);color:var(
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 .leaflet-container{background:#e8e0d5!important;}
+.leaflet-control-layers{border-radius:var(--radius)!important;border:1px solid var(--border)!important;background:var(--card)!important;color:var(--cream)!important;font-family:var(--ff-body)!important;font-size:12px!important;}
+.leaflet-control-layers label{color:var(--cream)!important;}
 </style>
 </head>
 <body>
@@ -289,17 +291,29 @@ const goldIcon = L.divIcon({
   iconSize: [28, 36], iconAnchor: [14, 36]
 });
 
+const cartoAttr = '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>';
+const cartoOpts = { attribution: cartoAttr, subdomains: 'abcd', maxZoom: 19 };
+
+function makeBasemaps() {
+  return {
+    'Map': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', cartoOpts),
+    'Labels': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', cartoOpts),
+    'Simple': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', cartoOpts)
+  };
+}
+
 function initMap() {
   if (map) { map.remove(); map = null; }
   pinMarker = null; answerMarker = null; answerLine = null;
   const q = QS[curQ];
+  const layers = makeBasemaps();
   map = L.map('map', { zoomControl: true, attributionControl: true });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 19
-  }).addTo(map);
+  layers['Map'].addTo(map);
+  L.control.layers(layers, null, { position: 'topright', collapsed: false }).addTo(map);
   map.setView([q.lat, q.lng], q.zoom);
+  L.polyline([[0, -180], [0, 180]], {
+    color: '#BB1919', weight: 1, dashArray: '6, 6', opacity: 0.5, interactive: false
+  }).addTo(map);
   map.on('click', onMapClick);
   setTimeout(() => map.invalidateSize(), 150);
 }
