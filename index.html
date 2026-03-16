@@ -310,9 +310,7 @@ function onMapClick(e) {
   pinMarker = L.marker([lat, lng], { icon: redIcon }).addTo(map);
   const q = QS[curQ];
   const km = hav(lat, lng, q.lat, q.lng);
-  const p = calcPts(km, q.maxKm);
-  document.getElementById('dist-info').innerHTML =
-    `📍 <strong>${toMi(km).toLocaleString()} mi</strong> from target &nbsp;·&nbsp; ~${p} pts`;
+  document.getElementById('dist-info').textContent = 'Pin placed — tap CONFIRM when ready!';
   document.getElementById('btn-confirm').style.display = 'block';
   map._pinData = { lat, lng, km };
 }
