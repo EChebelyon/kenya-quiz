@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --red:#BB1919; --green:#006600; --gold:#D4A017; --gold-light:#F0C84A;
+  --bg:#0d1b0e; --card:#162118; --cream:#FDF6E3;
+  --border:rgba(212,160,23,0.25); --muted:rgba(253,246,227,0.45);
+  --ff-display:'Bebas Neue',sans-serif; --ff-body:'DM Sans',sans-serif;
+  --radius:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:var(--ff-body);background:var(--bg);color:var(--cream);overflow-x:hidden;}
+
+/* screens */
+.screen{display:none;flex-direction:column;align-items:center;min-height:100vh;padding:20px 16px;}
+.screen.active{display:flex;}
+
+/* title */
+#s-title{background:radial-gradient(ellipse at 50% 20%,#1a3d1a 0%,var(--bg) 65%);justify-content:center;gap:18px;text-align:center;}
+.flag{width:160px;height:96px;border-radius:4px;overflow:hidden;margin:0 auto;box-shadow:0 8px 32px rgba(0,0,0,.6);display:flex;flex-direction:column;}
+.flag-b{flex:1;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:24px;}
+.flag-r{flex:1;background:#BB1919;}
+.flag-g{flex:1;background:#006600;}
+.hero{font-family:var(--ff-display);font-size:58px;letter-spacing:3px;color:var(--gold);line-height:.95;}
+.hero-sub{font-family:var(--ff-display);font-size:20px;letter-spacing:6px;color:var(--muted);}
+.tagline{font-size:14px;color:var(--muted);line-height:1.7;max-width:280px;}
+.btn{font-family:var(--ff-display);font-size:22px;letter-spacing:3px;padding:13px 36px;border:none;border-radius:var(--radius);cursor:pointer;transition:all .18s;}
+.btn-red{background:var(--red);color:#fff;}
+.btn-red:hover{background:#d41f1f;transform:translateY(-2px);box-shadow:0 6px 20px rgba(187,25,25,.45);}
+.btn-ghost{background:transparent;color:var(--gold);border:1px solid var(--border);font-size:14px;font-family:var(--ff-body);font-weight:500;padding:9px 22px;border-radius:var(--radius);}
+.btn-ghost:hover{background:rgba(212,160,23,.1);}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+
+/* name */
+#s-name{justify-content:center;gap:16px;text-align:center;}
+#s-name h2{font-family:var(--ff-display);font-size:38px;color:var(--gold);letter-spacing:2px;}
+.name-input{font-family:var(--ff-body);font-size:20px;text-align:center;background:var(--card);border:1px solid var(--border);color:var(--cream);padding:13px 18px;border-radius:var(--radius);width:280px;outline:none;}
+.name-input:focus{border-color:var(--gold);}
+
+/* quiz */
+#s-quiz{padding:0;gap:0;}
+.quiz-top{width:100%;background:var(--card);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;flex-shrink:0;}
+.qt-left{display:flex;align-items:center;gap:10px;}
+.q-num{font-family:var(--ff-display);font-size:22px;color:var(--gold);letter-spacing:1px;}
+.dots{display:flex;gap:5px;}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(212,160,23,.2);transition:background .3s;}
+.dot.done{background:var(--gold);}
+.dot.now{background:var(--red);}
+.player-tag{font-size:12px;color:var(--muted);}
+.q-card{width:100%;background:rgba(22,33,24,.97);border-bottom:1px solid var(--border);padding:12px 16px;flex-shrink:0;}
+.q-card h3{font-family:var(--ff-display);font-size:20px;letter-spacing:.5px;margin-bottom:3px;}
+.q-hint{font-size:12px;color:var(--muted);font-style:italic;}
+#map{flex:1;width:100%;min-height:420px;}
+.quiz-bottom{width:100%;background:var(--card);border-top:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.dist-info{flex:1;font-size:13px;color:var(--muted);}
+.dist-info strong{color:var(--gold);font-size:15px;}
+#btn-confirm{display:none;}
+
+/* result */
+#s-result{justify-content:center;gap:14px;text-align:center;}
+.res-emoji{font-size:72px;animation:pop .4s cubic-bezier(.34,1.56,.64,1);}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.res-title{font-family:var(--ff-display);font-size:52px;letter-spacing:2px;}
+.res-title.great{color:var(--gold);}
+.res-title.good{color:#7ec8a0;}
+.res-title.ok{color:var(--cream);}
+.res-km{font-size:16px;color:var(--muted);}
+.breakdown{width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.br-row{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid rgba(212,160,23,.08);font-size:13px;}
+.br-row:last-child{border-bottom:none;background:rgba(212,160,23,.07);}
+.br-label{color:var(--muted);}
+.br-val{color:var(--gold);font-weight:600;}
+.br-total{font-size:20px!important;}
+
+/* fun fact */
+.fun-fact{max-width:420px;background:rgba(212,160,23,.1);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;font-size:13px;line-height:1.5;color:var(--cream);text-align:left;}
+
+/* leaderboard */
+#s-lb{gap:14px;}
+.lb-head{font-family:var(--ff-display);font-size:46px;letter-spacing:3px;color:var(--gold);text-align:center;}
+.lb-sub{font-size:13px;color:var(--muted);text-align:center;margin-top:-6px;}
+.lb-wrap{width:100%;max-width:560px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.lb-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid rgba(212,160,23,.08);}
+.lb-row:last-child{border-bottom:none;}
+.lb-row.r1{background:rgba(212,160,23,.16);}
+.lb-row.r2{background:rgba(192,192,192,.08);}
+.lb-row.r3{background:rgba(205,127,50,.08);}
+.lb-rank{font-family:var(--ff-display);font-size:20px;width:34px;text-align:center;flex-shrink:0;}
+.rk1{color:var(--gold);}
+.rk2{color:#C0C0C0;}
+.rk3{color:#CD7F32;}
+.rkn{color:rgba(253,246,227,.3);font-size:15px;}
+.lb-name{flex:1;font-size:14px;font-weight:500;}
+.lb-score{text-align:right;}
+.lb-pts{font-family:var(--ff-display);font-size:20px;color:var(--gold);}
+.lb-km{font-size:11px;color:var(--muted);}
+.lb-empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
+.lb-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.gift-note{font-size:12px;color:rgba(253,246,227,.25);text-align:center;}
+.you-tag{font-size:11px;color:var(--gold);opacity:.75;margin-left:4px;}
+
+/* toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 20px;font-size:13px;color:var(--cream);opacity:0;transition:all .3s;z-index:9999;pointer-events:none;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.leaflet-container{background:#e8e0d5!important;}
+</style>
+</head>
+<body>
+
+<!-- TITLE -->
+<div id="s-title" class="screen active">
+  <div class="flag">
+    <div style="flex:3;background:#000"></div>
+    <div style="flex:0.5;background:#fff"></div>
+    <div style="flex:3;background:#BB1919"></div>
+    <div style="flex:0.5;background:#fff"></div>
+    <div style="flex:3;background:#006600"></div>
+  </div>
+  <div>
+    <div class="hero">KENYA<br>QUIZ</div>
+    <div class="hero-sub">Geo Challenge</div>
+  </div>
+  <p class="tagline">Drop a pin on the map — the closer you are, the more points you score!</p>
+  <button class="btn btn-red" onclick="go('s-name')">START PLAYING</button>
+  <button class="btn btn-ghost" onclick="openLeaderboard()">🏆 Leaderboard</button>
+</div>
+
+<!-- NAME -->
+<div id="s-name" class="screen">
+  <h2>What's your name?</h2>
+  <input class="name-input" id="inp-name" maxlength="20" placeholder="Type your name…"
+    onkeydown="if(event.key==='Enter')startGame()"/>
+  <button class="btn btn-red" onclick="startGame()">LET'S GO</button>
+  <button class="btn btn-ghost" onclick="go('s-title')">Back</button>
+</div>
+
+<!-- QUIZ -->
+<div id="s-quiz" class="screen">
+  <div class="quiz-top">
+    <div class="qt-left">
+      <div class="q-num" id="q-num">Q1</div>
+      <div class="dots" id="dots"></div>
+    </div>
+    <div class="player-tag" id="player-tag"></div>
+  </div>
+  <div class="q-card">
+    <h3 id="q-text"></h3>
+    <div class="q-hint" id="q-hint"></div>
+  </div>
+  <div id="map"></div>
+  <div class="quiz-bottom">
+    <div class="dist-info" id="dist-info">Tap the map to drop your pin</div>
+    <button class="btn btn-red" id="btn-confirm" onclick="confirmPin()">CONFIRM ✓</button>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="s-result" class="screen">
+  <div class="res-emoji" id="res-emoji"></div>
+  <div class="res-title" id="res-title"></div>
+  <div class="res-km" id="res-km"></div>
+  <div class="fun-fact" id="fun-fact"></div>
+  <div class="breakdown" id="breakdown"></div>
+  <button class="btn btn-red" id="btn-next" onclick="nextQ()">NEXT →</button>
+</div>
+
+<!-- LEADERBOARD -->
+<div id="s-lb" class="screen">
+  <div class="lb-head">LEADERBOARD</div>
+  <div class="lb-sub">Top explorers · scores saved to the cloud ☁️</div>
+  <div class="lb-wrap" id="lb-wrap"></div>
+  <div class="lb-actions">
+    <button class="btn btn-red" onclick="go('s-name')">PLAY AGAIN</button>
+  </div>
+  <div class="gift-note">🎁 Top 3 players win a Kenyan gift!</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Supabase ────────────────────────────────────────────────────────────────
+const { createClient } = supabase;
+const sb = createClient(
+  'https://wyfkndefvulqgyvzcahw.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5ZmtuZGVmdnVscWd5dnpjYWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2OTMzNTUsImV4cCI6MjA4OTI2OTM1NX0.LbhgwULTTz8TVPCxcD3HcbY0CAlbP6OsendqgDxWRvY'
+);
+
+// ── Questions ───────────────────────────────────────────────────────────────
+const QS = [
+  {
+    text: 'Where is Kenya on the world map?',
+    hint: "Hint: Eastern Africa, just below the equator",
+    lat: 0.02, lng: 37.91, zoom: 2, maxKm: 3500,
+    fact: "Kenya sits right on the equator! That means day and night are almost the same length all year round."
+  },
+  {
+    text: 'Pin Nairobi — the capital city of Kenya',
+    hint: 'Hint: South-central Kenya',
+    lat: -1.2921, lng: 36.8219, zoom: 5, maxKm: 700,
+    fact: "Nairobi has a national park inside the city — you can see giraffes with skyscrapers in the background!"
+  },
+  {
+    text: 'Where is Mount Elgon?',
+    hint: "Hint: Western border near Uganda — that's Nia's grandmother's home!",
+    lat: 1.1355, lng: 34.5592, zoom: 5, maxKm: 700,
+    fact: "Mount Elgon has the largest cave system of any volcano on Earth — elephants go inside to lick the salty walls!"
+  },
+  {
+    text: "Pin Mount Kenya — the country's highest peak",
+    hint: 'Hint: Almost exactly in the center of Kenya',
+    lat: -0.1521, lng: 37.3084, zoom: 5, maxKm: 700,
+    fact: "Mount Kenya is 17,057 feet tall and has glaciers near the equator — snow in Africa!"
+  },
+  {
+    text: "Kogelo — Barack Obama's grandmother's village",
+    hint: 'Hint: Western Kenya, near Lake Victoria',
+    lat: 0.3167, lng: 34.4833, zoom: 5, maxKm: 700,
+    fact: "Barack Obama's father was born in Kenya, making Obama the first US president with Kenyan roots!"
+  },
+  {
+    text: 'Pin the Maasai Mara — home of the Great Migration!',
+    hint: 'Hint: Southwest Kenya, bordering Tanzania',
+    lat: -1.4061, lng: 35.0, zoom: 5, maxKm: 700,
+    fact: "Every year, over 1.5 million wildebeest cross crocodile-filled rivers to reach the Maasai Mara!"
+  },
+];
+
+// ── State ───────────────────────────────────────────────────────────────────
+let playerName = '', curQ = 0, scores = [];
+let pinMarker = null, answerMarker = null, answerLine = null, map = null;
+let newEntryName = '';
+
+// ── Haversine ───────────────────────────────────────────────────────────────
+function hav(la1, lo1, la2, lo2) {
+  const R = 6371, r = Math.PI / 180;
+  const dLa = (la2 - la1) * r, dLo = (lo2 - lo1) * r;
+  const a = Math.sin(dLa/2)**2 + Math.cos(la1*r) * Math.cos(la2*r) * Math.sin(dLo/2)**2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
+
+function toMi(km) { return Math.round(km * 0.621371); }
+
+function calcPts(km, max) {
+  if (km <= 50)  return 1000;
+  if (km <= 150) return 800;
+  if (km <= 400) return 600;
+  if (km <= max) return Math.max(50, Math.round(400 * (1 - km / max)));
+  return 0;
+}
+
+// ── Nav & Toast ─────────────────────────────────────────────────────────────
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function toast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ── Map ─────────────────────────────────────────────────────────────────────
+const redIcon = L.divIcon({
+  className: '',
+  html: `<svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 0C8.48 0 4 4.48 4 10c0 7.5 10 26 10 26s10-18.5 10-26C24 4.48 19.52 0 14 0z" fill="#BB1919"/>
+    <circle cx="14" cy="10" r="4.5" fill="white"/>
+  </svg>`,
+  iconSize: [28, 36], iconAnchor: [14, 36]
+});
+
+const goldIcon = L.divIcon({
+  className: '',
+  html: `<svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 0C8.48 0 4 4.48 4 10c0 7.5 10 26 10 26s10-18.5 10-26C24 4.48 19.52 0 14 0z" fill="#D4A017"/>
+    <circle cx="14" cy="10" r="4.5" fill="white"/>
+  </svg>`,
+  iconSize: [28, 36], iconAnchor: [14, 36]
+});
+
+function initMap() {
+  if (map) { map.remove(); map = null; }
+  pinMarker = null; answerMarker = null; answerLine = null;
+  const q = QS[curQ];
+  map = L.map('map', { zoomControl: true, attributionControl: true });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+  map.setView([q.lat, q.lng], q.zoom);
+  map.on('click', onMapClick);
+  setTimeout(() => map.invalidateSize(), 150);
+}
+
+function onMapClick(e) {
+  const { lat, lng } = e.latlng;
+  if (pinMarker) map.removeLayer(pinMarker);
+  pinMarker = L.marker([lat, lng], { icon: redIcon }).addTo(map);
+  const q = QS[curQ];
+  const km = hav(lat, lng, q.lat, q.lng);
+  const p = calcPts(km, q.maxKm);
+  document.getElementById('dist-info').innerHTML =
+    `📍 <strong>${toMi(km).toLocaleString()} mi</strong> from target &nbsp;·&nbsp; ~${p} pts`;
+  document.getElementById('btn-confirm').style.display = 'block';
+  map._pinData = { lat, lng, km };
+}
+
+// ── Game flow ────────────────────────────────────────────────────────────────
+function startGame() {
+  const n = document.getElementById('inp-name').value.trim();
+  if (!n) { document.getElementById('inp-name').focus(); return; }
+  playerName = n; curQ = 0; scores = [];
+  loadQ();
+  go('s-quiz');
+  setTimeout(initMap, 200);
+}
+
+function loadQ() {
+  const q = QS[curQ];
+  document.getElementById('q-num').textContent = `Q${curQ + 1}`;
+  document.getElementById('q-text').textContent = q.text;
+  document.getElementById('q-hint').textContent = q.hint;
+  document.getElementById('player-tag').textContent = playerName;
+  document.getElementById('dist-info').textContent = 'Tap the map to drop your pin';
+  document.getElementById('btn-confirm').style.display = 'none';
+  document.getElementById('btn-confirm').disabled = false;
+  renderDots();
+}
+
+function renderDots() {
+  document.getElementById('dots').innerHTML = QS.map((_, i) =>
+    `<div class="dot ${i < curQ ? 'done' : i === curQ ? 'now' : ''}"></div>`
+  ).join('');
+}
+
+function confirmPin() {
+  const d = map._pinData;
+  if (!d) return;
+  const q = QS[curQ];
+  const p = calcPts(d.km, q.maxKm);
+  scores.push({ label: q.text.split('—')[0].replace('Pin ', '').trim(), km: d.km, pts: p });
+
+  // Draw dashed line from guess to answer
+  if (answerLine) map.removeLayer(answerLine);
+  answerLine = L.polyline([[d.lat, d.lng], [q.lat, q.lng]], {
+    color: '#D4A017', weight: 2, dashArray: '8, 8', opacity: 0.7
+  }).addTo(map);
+
+  // Place gold answer pin and fly to fit both points
+  if (answerMarker) map.removeLayer(answerMarker);
+  answerMarker = L.marker([q.lat, q.lng], { icon: goldIcon })
+    .bindPopup(`<b style="font-family:'Bebas Neue';font-size:15px;letter-spacing:1px;color:#D4A017;">✓ Answer</b>`)
+    .addTo(map);
+  answerMarker.openPopup();
+  map.flyToBounds(answerLine.getBounds().pad(0.3), { duration: 0.9 });
+
+  document.getElementById('btn-confirm').disabled = true;
+  map.off('click', onMapClick);
+  setTimeout(() => showResult(d.km, p), 3000);
+}
+
+function showResult(km, p) {
+  let emoji, title, cls;
+  if (km <= 100)       { emoji = '🎯'; title = 'BULLSEYE!';   cls = 'great'; }
+  else if (km <= 400)  { emoji = '🌍'; title = 'SO CLOSE!';   cls = 'good';  }
+  else if (km <= 1200) { emoji = '📍'; title = 'NOT BAD!';    cls = 'ok';    }
+  else                 { emoji = '😅'; title = 'KEEP GOING';  cls = 'ok';    }
+
+  document.getElementById('res-emoji').textContent = emoji;
+  document.getElementById('res-title').textContent = title;
+  document.getElementById('res-title').className = `res-title ${cls}`;
+  document.getElementById('res-km').textContent = `${toMi(km).toLocaleString()} miles away · +${p} points`;
+  document.getElementById('fun-fact').textContent = `💡 ${QS[curQ].fact}`;
+
+  const total = scores.reduce((s, x) => s + x.pts, 0);
+  document.getElementById('breakdown').innerHTML =
+    scores.map(s =>
+      `<div class="br-row">
+        <span class="br-label">${s.label}</span>
+        <span class="br-val">${s.pts} <span style="font-size:10px;font-weight:400;opacity:.6">${toMi(s.km).toLocaleString()} mi</span></span>
+      </div>`
+    ).join('') +
+    `<div class="br-row">
+      <span class="br-label" style="font-weight:600">Total so far</span>
+      <span class="br-val br-total">${total}</span>
+    </div>`;
+
+  const isLast = curQ === QS.length - 1;
+  document.getElementById('btn-next').textContent = isLast ? 'SEE LEADERBOARD →' : 'NEXT QUESTION →';
+  go('s-result');
+}
+
+function nextQ() {
+  curQ++;
+  if (curQ >= QS.length) {
+    finishGame();
+  } else {
+    loadQ();
+    go('s-quiz');
+    setTimeout(initMap, 200);
+  }
+}
+
+// ── Finish & Supabase ────────────────────────────────────────────────────────
+async function finishGame() {
+  const totalPts = scores.reduce((s, x) => s + x.pts, 0);
+  const totalKm  = scores.reduce((s, x) => s + x.km, 0);
+  newEntryName = playerName;
+  try {
+    const { error } = await sb.from('kenya_quiz_leaderboard').insert({
+      name: playerName, pts: totalPts, km: totalKm
+    });
+    if (error) throw error;
+    toast('Score saved! ✓');
+  } catch (e) {
+    toast('Score not saved: ' + (e.message || 'unknown error'));
+  }
+  await openLeaderboard();
+}
+
+async function openLeaderboard() {
+  go('s-lb');
+  document.getElementById('lb-wrap').innerHTML =
+    '<div class="lb-empty" style="color:var(--gold)">Loading scores…</div>';
+  try {
+    const { data, error } = await sb
+      .from('kenya_quiz_leaderboard')
+      .select('name, pts, km, created_at')
+      .order('pts', { ascending: false })
+      .order('km',  { ascending: true })
+      .limit(20);
+    if (error) throw error;
+    renderLb(data || []);
+  } catch (e) {
+    document.getElementById('lb-wrap').innerHTML =
+      `<div class="lb-empty">Could not load scores.<br><small style="opacity:.5">${e.message || ''}</small></div>`;
+  }
+}
+
+function renderLb(rows) {
+  const wrap = document.getElementById('lb-wrap');
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="lb-empty">No players yet — be the first! 🌍</div>';
+    return;
+  }
+  const medals = ['🥇', '🥈', '🥉'];
+  wrap.innerHTML = rows.map((r, i) => {
+    const rc   = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+    const rk   = i < 3 ? `rk${i + 1}` : 'rkn';
+    const medal = i < 3 ? medals[i] : i + 1;
+    const isYou = r.name === newEntryName;
+    return `<div class="lb-row ${rc}">
+      <div class="lb-rank ${rk}">${medal}</div>
+      <div class="lb-name">${esc(r.name)}${isYou ? '<span class="you-tag">← you!</span>' : ''}</div>
+      <div class="lb-score">
+        <div class="lb-pts">${r.pts.toLocaleString()}</div>
+        <div class="lb-km">${toMi(r.km).toLocaleString()} mi off</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
