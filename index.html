@@ -106,6 +106,13 @@ html,body{height:100%;font-family:var(--ff-body);background:var(--bg);color:var(
 .gift-note{font-size:12px;color:rgba(253,246,227,.25);text-align:center;}
 .you-tag{font-size:11px;color:var(--gold);opacity:.75;margin-left:4px;}
 
+/* bonus facts */
+.bonus-cards{width:100%;max-width:480px;display:flex;flex-direction:column;gap:10px;}
+.bonus-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;text-align:left;}
+.bonus-card .bc-title{font-family:var(--ff-display);font-size:16px;color:var(--gold);letter-spacing:1px;margin-bottom:4px;}
+.bonus-card .bc-body{font-size:13px;line-height:1.6;color:var(--cream);}
+.bonus-card .bc-emoji{font-size:20px;margin-right:6px;}
+
 /* toast */
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 20px;font-size:13px;color:var(--cream);opacity:0;transition:all .3s;z-index:9999;pointer-events:none;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -177,6 +184,15 @@ html,body{height:100%;font-family:var(--ff-body);background:var(--bg);color:var(
     <button class="btn btn-red" onclick="go('s-name')">PLAY AGAIN</button>
   </div>
   <div class="gift-note">🎁 Top 3 players win a Kenyan gift!</div>
+  <button class="btn btn-ghost" onclick="go('s-bonus')">🧠 Bonus Kenya Facts</button>
+</div>
+
+<!-- BONUS FACTS -->
+<div id="s-bonus" class="screen">
+  <div class="lb-head">DID YOU KNOW?</div>
+  <div class="lb-sub">Cool facts about Kenya for curious explorers</div>
+  <div class="bonus-cards" id="bonus-cards"></div>
+  <button class="btn btn-red" onclick="go('s-lb')">BACK TO LEADERBOARD</button>
 </div>
 
 <div id="toast"></div>
@@ -474,6 +490,28 @@ function renderLb(rows) {
     </div>`;
   }).join('');
 }
+
+// ── Bonus Facts ──────────────────────────────────────────────────────────────
+const BONUS_FACTS = [
+  { emoji: '🏃', title: 'RUNNING LEGENDS', body: "Kenya has won over 100 Olympic medals, almost all in running! Kenyan marathon runners are so fast that 17 of the top 20 fastest marathon times ever were run by Kenyans." },
+  { emoji: '🦁', title: 'THE BIG FIVE', body: "Kenya is one of the best places to see the \"Big Five\" — lions, elephants, buffalo, leopards, and rhinos. The term comes from old safari hunters who said these were the five hardest animals to track on foot." },
+  { emoji: '🗣️', title: 'THREE LANGUAGES', body: "Most Kenyan kids grow up speaking three languages: their family's tribal language, Swahili (the national language), and English (used in school). \"Hakuna Matata\" is real Swahili — it means \"no worries!\"" },
+  { emoji: '☕', title: 'COFFEE & TEA', body: "Kenya grows some of the world's best coffee and is the #3 largest tea exporter on Earth. But here's the twist — most Kenyans prefer drinking tea with milk, not coffee!" },
+  { emoji: '🦒', title: 'TALLEST ANIMALS', body: "Kenya is home to the world's tallest animal — the giraffe! A baby giraffe is about 6 feet tall at birth. That's taller than most adult humans from day one." },
+  { emoji: '🌍', title: 'THE RIFT VALLEY', body: "The Great Rift Valley runs right through Kenya. It's so big you can see it from space! Scientists say Africa is slowly splitting in two along this crack — but don't worry, it'll take millions of years." },
+  { emoji: '📱', title: 'MOBILE MONEY PIONEERS', body: "Kenya invented M-Pesa, a way to send money by phone. It launched in 2007, years before Apple Pay or Venmo! Today, more Kenyans use mobile money than have bank accounts." },
+  { emoji: '🐘', title: 'ELEPHANT ORPHANAGE', body: "Nairobi has a famous elephant orphanage where baby elephants who lost their parents are raised by humans. The keepers even sleep next to the babies so they don't feel alone!" },
+];
+
+function renderBonusFacts() {
+  document.getElementById('bonus-cards').innerHTML = BONUS_FACTS.map(f =>
+    `<div class="bonus-card">
+      <div class="bc-title"><span class="bc-emoji">${f.emoji}</span>${f.title}</div>
+      <div class="bc-body">${f.body}</div>
+    </div>`
+  ).join('');
+}
+renderBonusFacts();
 
 function esc(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
