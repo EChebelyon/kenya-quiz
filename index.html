@@ -24,7 +24,7 @@ html,body{height:100%;font-family:var(--ff-body);background:var(--bg);color:var(
 
 /* title */
 #s-title{background:radial-gradient(ellipse at 50% 20%,#1a3d1a 0%,var(--bg) 65%);justify-content:center;gap:18px;text-align:center;}
-.flag{width:160px;height:96px;border-radius:4px;overflow:hidden;margin:0 auto;box-shadow:0 8px 32px rgba(0,0,0,.6);display:flex;flex-direction:column;}
+.flag{width:160px;border-radius:4px;margin:0 auto;box-shadow:0 8px 32px rgba(0,0,0,.6);}
 .flag-b{flex:1;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:24px;}
 .flag-r{flex:1;background:#BB1919;}
 .flag-g{flex:1;background:#006600;}
@@ -119,13 +119,7 @@ html,body{height:100%;font-family:var(--ff-body);background:var(--bg);color:var(
 
 <!-- TITLE -->
 <div id="s-title" class="screen active">
-  <div class="flag">
-    <div style="flex:3;background:#000"></div>
-    <div style="flex:0.5;background:#fff"></div>
-    <div style="flex:3;background:#BB1919"></div>
-    <div style="flex:0.5;background:#fff"></div>
-    <div style="flex:3;background:#006600"></div>
-  </div>
+  <img class="flag" src="flag.png" alt="Kenyan flag"/>
   <div>
     <div class="hero">KENYA<br>QUIZ</div>
     <div class="hero-sub">Geo Challenge</div>
