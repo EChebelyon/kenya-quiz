@@ -251,11 +251,8 @@ function hav(la1, lo1, la2, lo2) {
 function toMi(km) { return Math.round(km * 0.621371); }
 
 function calcPts(km, max) {
-  if (km <= 50)  return 1000;
-  if (km <= 150) return 800;
-  if (km <= 400) return 600;
-  if (km <= max) return Math.max(50, Math.round(400 * (1 - km / max)));
-  return 0;
+  if (km >= max) return 0;
+  return Math.round(1000 * Math.exp(-3 * km / max));
 }
 
 // ── Nav & Toast ─────────────────────────────────────────────────────────────
