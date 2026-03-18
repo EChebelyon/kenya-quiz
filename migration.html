@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>The Great Migration</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#0d1a08;font-family:'DM Sans',sans-serif;}
+canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%;}
+#hud-top{
+  position:absolute;top:0;left:0;right:0;
+  background:linear-gradient(to bottom,rgba(5,12,3,0.92) 60%,transparent);
+  padding:10px 18px 28px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  pointer-events:none;
+}
+.hud-left h1{font-family:'Bebas Neue';font-size:26px;letter-spacing:3px;color:#D4A017;line-height:1;}
+.hud-left p{font-size:10px;letter-spacing:2px;color:rgba(253,240,180,0.45);margin-top:1px;}
+.season-strip{display:flex;align-items:stretch;gap:2px;border-radius:4px;overflow:hidden;border:1px solid rgba(212,160,23,0.2);}
+.month-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3px 6px;min-width:34px;cursor:pointer;border-right:1px solid rgba(0,0,0,0.2);transition:background .4s;pointer-events:all;}
+.month-cell:last-child{border-right:none;}
+.month-cell .mo{font-family:'Bebas Neue';font-size:12px;letter-spacing:1px;color:rgba(255,255,255,0.5);transition:color .4s;}
+.month-cell .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);margin-top:2px;transition:all .4s;}
+.month-cell.active{background:rgba(212,160,23,0.22);}
+.month-cell.active .mo{color:#D4A017;}
+.month-cell.active .dot{background:#D4A017;box-shadow:0 0 6px #D4A017;}
+#info-panel{
+  position:absolute;left:14px;bottom:60px;
+  background:rgba(5,12,3,0.88);border:1px solid rgba(212,160,23,0.25);
+  border-radius:6px;padding:14px 16px;max-width:295px;
+}
+#info-month{font-family:'Bebas Neue';font-size:22px;color:#D4A017;letter-spacing:2px;margin-bottom:4px;}
+#info-region{font-size:11px;letter-spacing:2px;color:rgba(253,240,180,0.5);margin-bottom:8px;text-transform:uppercase;}
+#info-text{font-size:13px;color:rgba(253,240,180,0.82);line-height:1.65;}
+#info-event{margin-top:10px;padding:6px 10px;border-radius:3px;font-size:12px;font-weight:500;color:#fff;display:none;border-left:3px solid #D4A017;}
+#stats{position:absolute;right:14px;bottom:60px;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.stat-card{background:rgba(5,12,3,0.85);border:1px solid rgba(212,160,23,0.2);border-radius:5px;padding:7px 14px;text-align:center;min-width:90px;}
+.stat-num{font-family:'Bebas Neue';font-size:24px;color:#E8B84B;line-height:1;}
+.stat-lbl{font-size:9px;letter-spacing:1.5px;color:rgba(253,240,180,0.38);margin-top:1px;}
+#controls{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(to top,rgba(5,12,3,0.92) 60%,transparent);
+  padding:18px 16px 10px;
+  display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+}
+.btn{font-family:'Bebas Neue';font-size:14px;letter-spacing:2px;padding:6px 16px;border:1px solid rgba(212,160,23,0.35);background:rgba(212,160,23,0.1);color:#D4A017;border-radius:3px;cursor:pointer;transition:all .15s;user-select:none;}
+.btn:hover{background:rgba(212,160,23,0.25);border-color:#D4A017;}
+.btn.red{border-color:rgba(187,25,25,0.5);background:rgba(187,25,25,0.15);color:#ff7070;}
+.btn.active{background:rgba(187,25,25,0.28);border-color:#BB1919;color:#ff8888;}
+.speed-label{font-size:11px;color:rgba(253,240,180,0.35);letter-spacing:1px;}
+#toast{position:absolute;top:62px;left:50%;transform:translateX(-50%);background:rgba(5,12,3,0.9);border:1px solid rgba(212,160,23,0.3);border-radius:4px;padding:7px 18px;font-size:12px;color:rgba(253,240,180,0.8);letter-spacing:.3px;pointer-events:none;opacity:0;transition:opacity .35s;white-space:nowrap;}
+#toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud-top">
+  <div class="hud-left">
+    <h1>THE GREAT MIGRATION</h1>
+    <p>SERENGETI · GRUMETI · MARA RIVER · MAASAI MARA · KENYA</p>
+  </div>
+  <div class="season-strip" id="month-strip"></div>
+</div>
+<div id="info-panel">
+  <div id="info-month">JANUARY</div>
+  <div id="info-region">Southern Serengeti</div>
+  <div id="info-text">The herd grazes on short grass plains.</div>
+  <div id="info-event"></div>
+</div>
+<div id="stats">
+  <div class="stat-card"><div class="stat-num" id="s-gnu">0</div><div class="stat-lbl">WILDEBEEST</div></div>
+  <div class="stat-card"><div class="stat-num" id="s-zeb">0</div><div class="stat-lbl">ZEBRAS</div></div>
+  <div class="stat-card"><div class="stat-num" id="s-croc">0</div><div class="stat-lbl">CROCS</div></div>
+  <div class="stat-card"><div class="stat-num" id="s-lion">0</div><div class="stat-lbl">LIONS</div></div>
+</div>
+<div id="controls">
+  <button class="btn active" id="btn-lion" onclick="setTool('lion')">🦁 LION</button>
+  <button class="btn" id="btn-croc" onclick="setTool('croc')">🐊 CROC</button>
+  <button class="btn" onclick="prevMonth()">◀ PREV</button>
+  <button class="btn" onclick="nextMonth()">NEXT ▶</button>
+  <button class="btn" id="btn-auto" onclick="toggleAuto()">⏵ AUTO</button>
+  <span class="speed-label">SPEED</span>
+  <button class="btn" onclick="setSpeed(1)">1×</button>
+  <button class="btn" onclick="setSpeed(3)">3×</button>
+  <button class="btn" onclick="setSpeed(8)">8×</button>
+  <button class="btn red" onclick="resetSim()">↺ RESET</button>
+</div>
+<div id="toast"></div>
+
+<script>
+const cv=document.getElementById('c');
+const cx=cv.getContext('2d');
+let W,H;
+const PR=Math.min(devicePixelRatio,2);
+
+function resize(){
+  W=cv.clientWidth;H=cv.clientHeight;
+  cv.width=W*PR;cv.height=H*PR;
+  cx.setTransform(PR,0,0,PR,0,0);
+  buildMap();
+}
+window.addEventListener('resize',resize);
+
+// ── Migration calendar ──────────────────────────────────────────────────────
+const MONTHS=[
+  {name:'January',short:'JAN',region:'Southern Serengeti, Tanzania',
+   text:'The herd spreads across the nutrient-rich short-grass plains of Ndutu. Volcanic soil produces the most nutritious grass in Africa. Pregnant females rest and feed intensively before calving.',
+   event:null,hx:.27,hy:.76,sky:['#3A2A10','#5A4020'],grass:'#8B7040',crocs:3,wet:false},
+  {name:'February',short:'FEB',region:'Southern Serengeti — CALVING SEASON 🐄',
+   text:'PEAK CALVING! Around 500,000 calves are born in just 2–3 weeks. The plains explode with life — but lions, cheetahs, hyenas and wild dogs close in. 80% of calves survive their first week.',
+   event:'🐄  500,000 calves born in 3 weeks!',eventColor:'#D4A017',
+   hx:.26,hy:.78,sky:['#3A2A10','#5A4020'],grass:'#8B7040',crocs:2,wet:false},
+  {name:'March',short:'MAR',region:'Southern Serengeti — Long Rains Begin',
+   text:'The long rains arrive — a signal the herd has waited for. Fresh green grass carpets the plains. Calves are now strong enough to walk. The herd begins to stir northward and westward.',
+   event:'🌧️  Long rains begin — fresh green grass!',eventColor:'#2D7A30',
+   hx:.29,hy:.70,sky:['#283820','#3A5A2A'],grass:'#6A9040',crocs:3,wet:true},
+  {name:'April',short:'APR',region:'Central Serengeti, Tanzania',
+   text:'The great columns form. Hundreds of thousands of wildebeest march north and west in spectacular processions stretching as far as the eye can see. Rain is heaviest now — rivers swell.',
+   event:null,
+   hx:.33,hy:.60,sky:['#253520','#3A5A2A'],grass:'#5A8035',crocs:4,wet:true},
+  {name:'May',short:'MAY',region:'Western Corridor — GRUMETI RIVER, Tanzania',
+   text:'The herd reaches the Grumeti River — a relatively small crossing, but home to enormous resident crocodiles. Dramatic crossings begin. Some columns avoid the river; others plunge straight in.',
+   event:'🐊  Grumeti River crossing — Tanzania!',eventColor:'#1E6B4A',
+   hx:.20,hy:.50,sky:['#253520','#3A5A2A'],grass:'#5A8035',crocs:8,wet:true,grumetiEvent:true},
+  {name:'June',short:'JUN',region:'Western Corridor → Northern Serengeti',
+   text:'The dry season begins. The herd pushes relentlessly north. Dust clouds rise from thousands of hooves as the columns thin and stretch. The Mara River waits ahead — the most dangerous crossing of all.',
+   event:'☀️  Dry season — northward push accelerates',eventColor:'#8B6914',
+   hx:.31,hy:.35,sky:['#4A3A10','#6A5A20'],grass:'#8B7A40',crocs:5,wet:false},
+  {name:'July',short:'JUL',region:'MARA RIVER — Into Kenya! 🇰🇪',
+   text:'THE GREAT CROSSING! Wildebeest leap from steep 3-metre banks into the crocodile-filled Mara River. Chaos, fear and survival instinct collide. Thousands cross in surging waves — some are taken by crocodiles.',
+   event:'💥  MARA RIVER CROSSING INTO KENYA!',eventColor:'#BB1919',
+   hx:.50,hy:.30,sky:['#4A3A10','#6A5A20'],grass:'#8B7040',crocs:11,wet:false,maraEvent:true},
+  {name:'August',short:'AUG',region:'Maasai Mara, Kenya 🇰🇪',
+   text:'The herd is now in the MAASAI MARA — Kenya\'s world-famous reserve! 1.5 million animals graze Kenya\'s abundant grasslands. Multiple crossings continue back and forth. Peak safari season — tourists come from around the world.',
+   event:'🇰🇪  1.5 million animals in the Maasai Mara!',eventColor:'#006600',
+   hx:.60,hy:.25,sky:['#4A3A10','#6A5A20'],grass:'#7A8040',crocs:9,wet:false},
+  {name:'September',short:'SEP',region:'Maasai Mara, Kenya — Peak Season',
+   text:'Peak predator activity. Lions, cheetahs and leopards follow the herd. River crossings happen daily as wildebeest move between Kenya and Tanzania. The Mara River runs red with activity.',
+   event:'🦁  Peak lion, cheetah & leopard activity!',eventColor:'#BB6010',
+   hx:.63,hy:.30,sky:['#4A3A10','#6A5A20'],grass:'#7A7A38',crocs:8,wet:false},
+  {name:'October',short:'OCT',region:'Maasai Mara → Return South Begins',
+   text:'Short rains arrive in Tanzania — a biochemical signal reaches the herd through scent. The great return begins. Wildebeest cross the Mara River back south into Tanzania for the final time this year.',
+   event:'🌦️  Short rains — the return journey south!',eventColor:'#2D7A30',
+   hx:.50,hy:.40,sky:['#2A3020','#404A28'],grass:'#6A7A35',crocs:6,wet:true,maraEvent:true},
+  {name:'November',short:'NOV',region:'Northern → Eastern Serengeti, Tanzania',
+   text:'The herd moves south-east through Loliondo and into the northern Serengeti. Rains green the plains ahead like a carpet unrolling southward. The columns spread wide across a vast front.',
+   event:null,
+   hx:.40,hy:.50,sky:['#253520','#3A5A2A'],grass:'#6A8838',crocs:4,wet:true},
+  {name:'December',short:'DEC',region:'Eastern/Central Serengeti — Full Circle',
+   text:'The herd returns to the Serengeti and Ndutu plains. The grass is lush and nutritious. Females are pregnant again. The 1,800 km annual loop is complete — and begins again in January.',
+   event:'🔄  1,800 km loop complete — cycle begins again!',eventColor:'#D4A017',
+   hx:.28,hy:.68,sky:['#3A2A10','#5A4A20'],grass:'#7A8840',crocs:3,wet:false},
+];
+
+// ── Map geometry ────────────────────────────────────────────────────────────
+let mapData={};
+let trees=[],rocks=[],grassTufts=[],hills=[];
+
+function buildMap(){
+  const rY=H*.37,rH=H*.092;   // Mara river
+  const gY=H*.56,gH=H*.042;   // Grumeti river (only visible on Tanzania side)
+  const bX=W*.52;              // Tanzania/Kenya border
+  mapData={rY,rH,gY,gH,bX};
+  buildTerrain();
+}
+
+function buildTerrain(){
+  trees=[];rocks=[];grassTufts=[];hills=[];
+  const{rY,rH,gY,gH,bX}=mapData;
+
+  hills=[
+    {x:W*.06,y:rY*.5,rx:W*.11,ry:H*.1,col:'#2A3A18'},
+    {x:W*.86,y:rY*.42,rx:W*.09,ry:H*.08,col:'#1E3210'},
+    {x:W*.5,y:rY*.28,rx:W*.07,ry:H*.07,col:'#263A14'},
+  ];
+
+  for(let i=0;i<34;i++){
+    const kenya=i>19;
+    const x=kenya?bX+12+Math.random()*(W-bX-24):14+Math.random()*(bX-28);
+    let y;
+    do{y=20+Math.random()*(H-40);}
+    while((y>rY-10&&y<rY+rH+10)||(y>gY-8&&y<gY+gH+8&&x<bX*.9));
+    trees.push({x,y,h:18+Math.random()*16,r:14+Math.random()*12,kenya,ph:Math.random()*Math.PI*2});
+  }
+
+  for(let i=0;i<22;i++)
+    rocks.push({x:20+Math.random()*(W-40),y:mapData.rY+mapData.rH*(.1+Math.random()*.8),rx:4+Math.random()*10,ry:3+Math.random()*6});
+
+  for(let i=0;i<130;i++){
+    let x=Math.random()*W,y;
+    do{y=20+Math.random()*(H-40);}
+    while((y>rY-8&&y<rY+rH+8)||(y>gY-5&&y<gY+gH+5&&x<bX*.9));
+    grassTufts.push({x,y,l:4+Math.random()*9,a:.07+Math.random()*.16});
+  }
+}
+
+// ── Boids ────────────────────────────────────────────────────────────────────
+const BOID_N=200,ZEB_N=40;
+const boids=[];
+
+class Boid{
+  constructor(x,y,isZ){
+    this.x=x;this.y=y;this.isZ=isZ||false;
+    this.vx=(Math.random()-.5)*1.5;this.vy=(Math.random()-.5)*1.5;
+    this.sz=isZ?3+Math.random()*1.4:3.5+Math.random()*2.3;
+    this.ph=Math.random()*Math.PI*2;
+    this.dead=false;this.dT=0;
+    this.inMara=false;this.inGrum=false;
+  }
+  get spd(){return Math.hypot(this.vx,this.vy);}
+  update(dt,mi){
+    if(this.dead){this.dT=Math.max(0,this.dT-dt);return;}
+    const{rY,rH,gY,gH}=mapData;
+    const q=MONTHS[mi],qn=MONTHS[(mi+1)%12];
+    const tx=(q.hx+monthP*(qn.hx-q.hx))*W;
+    const ty=(q.hy+monthP*(qn.hy-q.hy))*H;
+    const pool=this.isZ?boids.filter(b=>b.isZ):boids.filter(b=>!b.isZ);
+    let sx=0,sy=0,sn=0,ax=0,ay=0,an=0,chx=0,chy=0,cn=0;
+    const SR=18,AR=38,CR=52;
+    for(const b of pool){
+      if(b===this||b.dead)continue;
+      const dx=b.x-this.x,dy=b.y-this.y,d=Math.hypot(dx,dy);
+      if(d<SR&&d>0){sx-=dx/d;sy-=dy/d;sn++;}
+      if(d<AR){ax+=b.vx;ay+=b.vy;an++;}
+      if(d<CR){chx+=b.x;chy+=b.y;cn++;}
+    }
+    let fx=0,fy=0;
+    if(sn){fx+=sx/sn*2.2;fy+=sy/sn*2.2;}
+    if(an){fx+=(ax/an-this.vx)*.3;fy+=(ay/an-this.vy)*.3;}
+    if(cn){fx+=(chx/cn-this.x)*.005;fy+=(chy/cn-this.y)*.005;}
+    const tdx=tx-this.x,tdy=ty-this.y,td=Math.hypot(tdx,tdy);
+    if(td>18){fx+=tdx/td*.28;fy+=tdy/td*.28;}
+    for(const l of lions){
+      const dx=this.x-l.x,dy=this.y-l.y,d=Math.hypot(dx,dy);
+      if(d<120&&d>0){const s=(1-d/120)*7;fx+=dx/d*s;fy+=dy/d*s;}
+    }
+    const mg=28;
+    if(this.x<mg)fx+=(mg-this.x)*.12;if(this.x>W-mg)fx-=(this.x-(W-mg))*.12;
+    if(this.y<20)fy+=(20-this.y)*.15;if(this.y>H-20)fy-=(this.y-(H-20))*.15;
+    for(const t of trees){const d=Math.hypot(this.x-t.x,this.y-t.y);if(d<t.r+10&&d>0){fx+=(this.x-t.x)/d*2.5;fy+=(this.y-t.y)/d*2.5;}}
+    const fm=Math.hypot(fx,fy);if(fm>22){fx=fx/fm*22;fy=fy/fm*22;}
+    this.vx+=fx*dt;this.vy+=fy*dt;
+    const mx=this.inMara||this.inGrum?1.6:2.5;
+    const sp=this.spd;
+    if(sp>mx){this.vx=this.vx/sp*mx;this.vy=this.vy/sp*mx;}
+    if(sp<.28&&!this.inMara&&!this.inGrum){const s=.28/Math.max(sp,.001);this.vx*=s;this.vy*=s;}
+    this.x+=this.vx*dt*60;this.y+=this.vy*dt*60;
+    this.ph+=dt*10*Math.min(sp/mx,1);
+    if(this.x<-14)this.x=W+14;if(this.x>W+14)this.x=-14;
+    this.inMara=this.y>rY&&this.y<rY+rH;
+    this.inGrum=this.y>gY&&this.y<gY+gH;
+  }
+  draw(){
+    if(this.dead)return;
+    const angle=Math.atan2(this.vy,this.vx),s=this.sz;
+    const wet=this.inMara||this.inGrum;
+    cx.save();cx.translate(this.x,this.y);cx.rotate(angle);
+    if(this.isZ)drawZebra(s,wet);else drawGnu(s,wet,this.spd,this.ph);
+    if(wet&&this.spd>.5){cx.fillStyle='rgba(100,180,220,0.25)';cx.beginPath();cx.ellipse(0,s*.6,s*.7,s*.28,0,0,Math.PI*2);cx.fill();}
+    cx.restore();
+  }
+}
+
+function drawGnu(s,wet,spd,ph){
+  const bc=wet?'#2A4555':'#3A2510',hc=wet?'#1E3545':'#261808';
+  cx.beginPath();cx.ellipse(0,s*.52,s*1.2,s*.28,0,0,Math.PI*2);cx.fillStyle='rgba(0,0,0,0.18)';cx.fill();
+  cx.beginPath();cx.ellipse(0,0,s*1.35,s*.72,0,0,Math.PI*2);cx.fillStyle=bc;cx.fill();
+  cx.beginPath();cx.ellipse(-s*.3,-s*.42,s*.65,s*.5,-.3,0,Math.PI*2);cx.fillStyle=hc;cx.fill();
+  cx.beginPath();cx.ellipse(s*1.18,-s*.08,s*.52,s*.4,.15,0,Math.PI*2);cx.fillStyle=hc;cx.fill();
+  cx.beginPath();cx.ellipse(s*1.62,s*.08,s*.28,s*.2,.25,0,Math.PI*2);cx.fillStyle='#180E04';cx.fill();
+  cx.strokeStyle='#5A4020';cx.lineWidth=1.2;
+  cx.beginPath();cx.moveTo(s*.95,-s*.38);cx.quadraticCurveTo(s*.7,-s*.85,s*1.08,-s*.95);cx.stroke();
+  cx.beginPath();cx.moveTo(s*1.25,-s*.32);cx.quadraticCurveTo(s*1.08,-s*.78,s*1.45,-s*.82);cx.stroke();
+  const sw=Math.sin(ph)*.35*Math.min(spd/1.5,1);
+  cx.strokeStyle=hc;cx.lineWidth=s*.32;cx.lineCap='round';
+  [[s*.45,s*.5,s*.55+sw*s,s*.95],[s*.65,s*.5,s*.65-sw*s,s*.95],[-s*.5,s*.5,-s*.5+sw*s*.7,s*.95],[-s*.65,s*.5,-s*.6-sw*s*.7,s*.95]]
+    .forEach(([x1,y1,x2,y2])=>{cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();});
+  cx.strokeStyle=hc;cx.lineWidth=.9;
+  cx.beginPath();cx.moveTo(-s*1.18,0);cx.quadraticCurveTo(-s*1.6,s*.28+Math.sin(ph*.6)*s*.28,-s*1.82,s*.08);cx.stroke();
+}
+
+function drawZebra(s,wet){
+  const bc=wet?'#B0A898':'#E0D8C8';
+  cx.beginPath();cx.ellipse(0,0,s*1.2,s*.65,0,0,Math.PI*2);cx.fillStyle=bc;cx.fill();
+  cx.strokeStyle='rgba(20,15,8,0.7)';cx.lineWidth=s*.22;
+  for(let i=-2;i<=2;i++){cx.beginPath();cx.moveTo(i*s*.42,-s*.55);cx.lineTo(i*s*.42+s*.1,s*.55);cx.stroke();}
+  cx.beginPath();cx.ellipse(s*1.05,-s*.08,s*.42,s*.35,.2,0,Math.PI*2);cx.fillStyle=bc;cx.fill();
+  cx.strokeStyle='rgba(20,15,8,0.6)';cx.lineWidth=s*.18;
+  cx.beginPath();cx.moveTo(s*.8,-s*.3);cx.lineTo(s*1.3,-s*.4);cx.stroke();
+}
+
+// ── Lions ─────────────────────────────────────────────────────────────────
+const lions=[];
+class Lion{
+  constructor(x,y){this.x=x;this.y=y;this.vx=(Math.random()-.5);this.vy=(Math.random()-.5);this.ph=Math.random()*Math.PI*2;this.roarT=0;this.sz=8;this.hunger=1;}
+  update(dt){
+    let nearest=null,nearD=Infinity;
+    for(const b of boids){if(b.dead)continue;const d=Math.hypot(b.x-this.x,b.y-this.y);if(d<nearD){nearD=d;nearest=b;}}
+    if(nearest&&nearD<180){
+      const dx=nearest.x-this.x,dy=nearest.y-this.y,d=Math.hypot(dx,dy);
+      this.vx+=dx/d*.22;this.vy+=dy/d*.22;
+      if(nearD<13){nearest.dead=true;nearest.dT=1.2;this.roarT=.5;this.hunger=Math.min(1,this.hunger+.4);}
+    }else{this.vx+=(Math.random()-.5)*.25;this.vy+=(Math.random()-.5)*.25;}
+    const{rY,rH,gY,gH}=mapData;
+    if(this.y>rY-22&&this.y<rY+rH+22)this.vy+=(this.y<rY+rH/2)?-.55:.55;
+    if(this.y>gY-16&&this.y<gY+gH+16)this.vy+=(this.y<gY+gH/2)?-.4:.4;
+    if(this.x<28)this.vx+=.35;if(this.x>W-28)this.vx-=.35;
+    if(this.y<28)this.vy+=.35;if(this.y>H-28)this.vy-=.35;
+    const sp=Math.hypot(this.vx,this.vy),mx=2.6;
+    if(sp>mx){this.vx=this.vx/sp*mx;this.vy=this.vy/sp*mx;}
+    this.x+=this.vx*dt*60;this.y+=this.vy*dt*60;
+    this.ph+=dt*9;this.roarT=Math.max(0,this.roarT-dt);this.hunger=Math.max(.4,this.hunger-dt*.012);
+  }
+  draw(){
+    const s=this.sz,angle=Math.atan2(this.vy,this.vx);
+    cx.save();cx.translate(this.x,this.y);cx.rotate(angle);
+    cx.beginPath();cx.ellipse(0,s*.75,s*1.4,s*.4,0,0,Math.PI*2);cx.fillStyle='rgba(0,0,0,0.2)';cx.fill();
+    cx.beginPath();cx.ellipse(0,0,s*1.5,s*.82,0,0,Math.PI*2);cx.fillStyle='#C8963A';cx.fill();
+    cx.beginPath();cx.arc(s*1.0,-s*.05,s*.92,0,Math.PI*2);cx.fillStyle='#7A4B1A';cx.fill();
+    cx.beginPath();cx.ellipse(s*1.2,0,s*.7,s*.58,0,0,Math.PI*2);cx.fillStyle='#D4A040';cx.fill();
+    cx.beginPath();cx.ellipse(s*1.85,s*.08,s*.28,s*.2,0,0,Math.PI*2);cx.fillStyle='#8B5528';cx.fill();
+    cx.fillStyle='#FFD700';[[-s*.18],[s*.18]].forEach(([dy])=>{cx.beginPath();cx.arc(s*1.35,dy,s*.12,0,Math.PI*2);cx.fill();});
+    cx.fillStyle='#111';[[-s*.18],[s*.18]].forEach(([dy])=>{cx.beginPath();cx.arc(s*1.37,dy,s*.06,0,Math.PI*2);cx.fill();});
+    const sw=Math.sin(this.ph)*.4;
+    cx.strokeStyle='#A87030';cx.lineWidth=s*.38;cx.lineCap='round';
+    [[s*.4,s*.6,s*.5+sw*s,s*1.2],[s*.6,s*.6,s*.6-sw*s,s*1.2],[-s*.5,s*.6,-s*.5+sw*s*.7,s*1.2],[-s*.7,s*.6,-s*.65-sw*s*.7,s*1.2]]
+      .forEach(([x1,y1,x2,y2])=>{cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();});
+    cx.strokeStyle='#C8963A';cx.lineWidth=1.5;
+    cx.beginPath();cx.moveTo(-s*1.5,0);cx.quadraticCurveTo(-s*2,s*.5+Math.sin(this.ph*.6)*s*.4,-s*2.2,s*.2);cx.stroke();
+    if(this.roarT>0){cx.beginPath();cx.arc(s*1.2,0,s*(1.5+(0.5-this.roarT)*10),0,Math.PI*2);cx.strokeStyle=`rgba(255,200,50,${this.roarT*.8})`;cx.lineWidth=2;cx.stroke();}
+    cx.restore();
+  }
+}
+
+// ── Crocs ─────────────────────────────────────────────────────────────────
+const crocs=[];
+class Croc{
+  constructor(x,y,grum){
+    const{rY,rH,gY,gH}=mapData;
+    this.grum=grum||false;
+    const ry=this.grum?gY:rY,rh=this.grum?gH:rH;
+    this.x=x||(60+Math.random()*(W-120));
+    this.y=y||(ry+rh*.15+Math.random()*rh*.7);
+    this.angle=Math.random()*Math.PI*2;
+    this.vx=0;this.vy=0;this.ph=Math.random()*Math.PI*2;
+    this.snapT=0;this.waitT=1+Math.random()*2.5;this.sz=9+Math.random()*4;this.hunting=false;
+  }
+  update(dt){
+    this.waitT-=dt;this.snapT=Math.max(0,this.snapT-dt);
+    const{rY,rH,gY,gH}=mapData;
+    const ry=this.grum?gY:rY,rh=this.grum?gH:rH;
+    if(this.waitT<=0){
+      let nearest=null,nearD=Infinity;
+      for(const b of boids){
+        if(b.dead)continue;
+        const inR=this.grum?b.inGrum:b.inMara;
+        if(!inR)continue;
+        const d=Math.hypot(b.x-this.x,b.y-this.y);
+        if(d<nearD){nearD=d;nearest=b;}
+      }
+      if(nearest&&nearD<130){
+        this.hunting=true;
+        const dx=nearest.x-this.x,dy=nearest.y-this.y,d=Math.hypot(dx,dy);
+        this.vx+=dx/d*.42;this.vy+=dy/d*.42;this.angle=Math.atan2(dy,dx);
+        if(nearD<14){nearest.dead=true;nearest.dT=1.2;this.snapT=.5;this.waitT=2+Math.random()*3;this.hunting=false;}
+      }else{
+        this.hunting=false;
+        this.vx+=Math.cos(this.angle)*.06+(Math.random()-.5)*.1;
+        this.vy+=Math.sin(this.angle)*.06+(Math.random()-.5)*.1;
+        if(Math.random()<.016)this.angle+=(Math.random()-.5)*1.4;
+      }
+    }
+    if(this.y<ry+5)this.vy+=.55;if(this.y>ry+rh-5)this.vy-=.55;
+    if(this.x<12)this.vx+=.6;if(this.x>W-12)this.vx-=.6;
+    const sp=Math.hypot(this.vx,this.vy),mx=this.hunting?2.4:.9;
+    if(sp>mx){this.vx=this.vx/sp*mx;this.vy=this.vy/sp*mx;}
+    this.x+=this.vx*dt*60;this.y+=this.vy*dt*60;this.ph+=dt*4;
+  }
+  draw(){
+    const s=this.sz;
+    cx.save();cx.translate(this.x,this.y);cx.rotate(this.angle);
+    cx.beginPath();cx.ellipse(0,0,s*1.8,s*.48,0,0,Math.PI*2);cx.fillStyle=this.hunting?'#3D6B30':'#2D5822';cx.fill();
+    cx.beginPath();cx.moveTo(-s*1.8,0);cx.quadraticCurveTo(-s*2.5,s*.3+Math.sin(this.ph)*s*.3,-s*3.2,s*.1);
+    cx.lineWidth=s*.48;cx.strokeStyle='#2D5822';cx.lineCap='round';cx.stroke();
+    cx.beginPath();cx.ellipse(s*2.0,0,s*.72,s*.36,0,0,Math.PI*2);cx.fillStyle='#3A6828';cx.fill();
+    cx.beginPath();cx.ellipse(s*2.72,s*.05,s*.44,s*.2,.1,0,Math.PI*2);cx.fillStyle='#2E5520';cx.fill();
+    cx.fillStyle='#FFD700';
+    cx.beginPath();cx.arc(s*1.7,-s*.28,s*.17,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(s*1.7,s*.28,s*.17,0,Math.PI*2);cx.fill();
+    cx.fillStyle='#000';
+    cx.beginPath();cx.arc(s*1.72,-s*.28,s*.09,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(s*1.72,s*.28,s*.09,0,Math.PI*2);cx.fill();
+    if(this.snapT>0){
+      cx.strokeStyle='#FFF';cx.lineWidth=1.5;
+      for(let i=-2;i<=2;i++){cx.beginPath();cx.moveTo(s*2.4+i*s*.12,-s*.16);cx.lineTo(s*2.4+i*s*.12,s*.16);cx.stroke();}
+      cx.fillStyle='rgba(100,200,255,0.45)';cx.beginPath();cx.arc(s*2.5,0,s*1.1,0,Math.PI*2);cx.fill();
+    }
+    cx.fillStyle='rgba(0,0,0,0.14)';
+    for(let i=-3;i<=3;i++){cx.beginPath();cx.arc(i*s*.48,0,s*.11,0,Math.PI*2);cx.fill();}
+    cx.restore();
+  }
+}
+
+// ── Dust ───────────────────────────────────────────────────────────────────
+const dust=[];
+function spawnDust(x,y,vx,vy){if(Math.random()<.22)dust.push({x,y,vx:vx*.4+(Math.random()-.5)*.7,vy:vy*.2-.4,life:.6+Math.random()*.5,max:1.1});}
+function tickDust(dt){
+  for(let i=dust.length-1;i>=0;i--){
+    const d=dust[i];d.x+=d.vx;d.y+=d.vy;d.life-=dt;
+    if(d.life<=0){dust.splice(i,1);continue;}
+    cx.fillStyle=`rgba(180,140,70,${(d.life/d.max)*.2})`;cx.beginPath();cx.arc(d.x,d.y,2+Math.random()*2,0,Math.PI*2);cx.fill();
+  }
+}
+
+// ── Rain ──────────────────────────────────────────────────────────────────
+const rain=[];
+for(let i=0;i<230;i++)rain.push({x:Math.random()*2000,y:Math.random()*1000,s:5+Math.random()*6});
+let rainA=0;
+function drawRain(){
+  if(rainA<.04)return;
+  cx.strokeStyle=`rgba(170,215,245,${rainA*.3})`;cx.lineWidth=.7;
+  for(const d of rain){d.y+=d.s;d.x+=1.2;if(d.y>H){d.y=-5;d.x=Math.random()*W;}cx.beginPath();cx.moveTo(d.x,d.y);cx.lineTo(d.x+2,d.y+10);cx.stroke();}
+  cx.fillStyle=`rgba(20,50,80,${rainA*.14})`;cx.fillRect(0,0,W,H);
+}
+
+// ── Lerp helpers ───────────────────────────────────────────────────────────
+function lerp(a,b,t){return a+(b-a)*t;}
+function lerpC(a,b,t){
+  const pa=pc(a),pb=pc(b);
+  return`rgb(${Math.round(lerp(pa[0],pb[0],t))},${Math.round(lerp(pa[1],pb[1],t))},${Math.round(lerp(pa[2],pb[2],t))})`;
+}
+function pc(s){
+  s=s.trim();
+  if(s.startsWith('#')){const h=s.slice(1);return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  const m=(s.match(/\d+/g)||[0,0,0]);return m.slice(0,3).map(Number);
+}
+
+// ── Scene ─────────────────────────────────────────────────────────────────
+let frameN=0;
+function drawScene(){
+  const q=MONTHS[curM],qn=MONTHS[(curM+1)%12],t=monthP;
+  const{rY,rH,gY,gH,bX}=mapData;
+
+  // Sky
+  const sT=lerpC(q.sky[0],qn.sky[0],t),sB=lerpC(q.sky[1],qn.sky[1],t);
+  const sky=cx.createLinearGradient(0,0,0,H*.65);
+  sky.addColorStop(0,sT);sky.addColorStop(1,sB);
+  cx.fillStyle=sky;cx.fillRect(0,0,W,H);
+
+  // Ground Tanzania
+  const gc=lerpC(q.grass,qn.grass,t);
+  const gT=cx.createLinearGradient(0,0,0,H);
+  gT.addColorStop(0,lerpC('#6A6030','#8A8040',t*.3));gT.addColorStop(1,gc);
+  cx.fillStyle=gT;cx.fillRect(0,0,bX,H);
+
+  // Ground Kenya (slightly greener peak wet)
+  const wetBoost=Math.sin(curM/11*Math.PI)*.35;
+  const kGreen=lerpC(gc,'#6A8A38',wetBoost);
+  const gK=cx.createLinearGradient(0,0,0,H);
+  gK.addColorStop(0,lerpC('#5A7030','#7A9A40',t*.3));gK.addColorStop(1,kGreen);
+  cx.fillStyle=gK;cx.fillRect(bX,0,W-bX,H);
+
+  // Border line
+  cx.save();cx.setLineDash([6,9]);cx.strokeStyle='rgba(200,180,100,0.16)';cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(bX,0);cx.lineTo(bX,H);cx.stroke();cx.setLineDash([]);cx.restore();
+
+  // Country labels
+  cx.fillStyle='rgba(255,240,160,0.18)';cx.font='bold 11px "DM Sans"';
+  cx.fillText('TANZANIA  /  SERENGETI',14,H-12);
+  cx.fillText('KENYA  /  MAASAI MARA',bX+14,H-12);
+
+  // Hills
+  for(const h of hills){cx.beginPath();cx.ellipse(h.x,h.y,h.rx,h.ry,0,0,Math.PI*2);cx.fillStyle=h.col;cx.fill();}
+
+  // Grass tufts
+  cx.strokeStyle=lerpC('#705020','#4A7A20',t*.4);cx.lineWidth=1;
+  for(const g of grassTufts){
+    cx.globalAlpha=g.a;
+    cx.beginPath();cx.moveTo(g.x,g.y);cx.lineTo(g.x+g.l,g.y-g.l*.5);cx.stroke();
+    cx.beginPath();cx.moveTo(g.x,g.y);cx.lineTo(g.x-g.l*.3,g.y-g.l*.6);cx.stroke();
+  }
+  cx.globalAlpha=1;
+
+  // Trees
+  for(const tr of trees){
+    tr.ph=(tr.ph||0)+.0025;
+    const sw=Math.sin(tr.ph)*1.5;
+    cx.fillStyle='#6B4C2A';cx.fillRect(tr.x-1.5,tr.y,3,tr.h);
+    const cap=tr.kenya?lerpC('#2A5820','#1A7020',t*.4):lerpC('#3A5818','#2A6818',t*.3);
+    cx.fillStyle=cap;
+    cx.beginPath();cx.ellipse(tr.x+sw,tr.y-tr.r*.32,tr.r,tr.r*.52,0,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.ellipse(tr.x-tr.r*.38+sw,tr.y,tr.r*.68,tr.r*.38,0,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.ellipse(tr.x+tr.r*.38+sw,tr.y,tr.r*.68,tr.r*.38,0,0,Math.PI*2);cx.fill();
+  }
+
+  // Grumeti River (Tanzania side only)
+  const grG=cx.createLinearGradient(0,gY,0,gY+gH);
+  grG.addColorStop(0,'#163A5A');grG.addColorStop(.5,'#1A4A72');grG.addColorStop(1,'#163A5A');
+  cx.fillStyle=grG;cx.fillRect(0,gY,bX*.88,gH);
+  cx.strokeStyle='rgba(120,95,50,0.5)';cx.lineWidth=1.5;
+  cx.beginPath();cx.moveTo(0,gY);cx.lineTo(bX*.88,gY);cx.stroke();
+  cx.strokeStyle='rgba(70,105,45,0.5)';
+  cx.beginPath();cx.moveTo(0,gY+gH);cx.lineTo(bX*.88,gY+gH);cx.stroke();
+  cx.fillStyle='rgba(80,160,200,0.38)';cx.font='9px "DM Sans"';
+  cx.fillText('GRUMETI RIVER',10,gY+gH/2+3);
+
+  // Mara River (full width)
+  frameN++;
+  const rG=cx.createLinearGradient(0,rY,0,rY+rH);
+  rG.addColorStop(0,'#1A3A5A');rG.addColorStop(.35,'#1E5080');rG.addColorStop(.65,'#1E5080');rG.addColorStop(1,'#1A3A5A');
+  cx.fillStyle=rG;cx.fillRect(0,rY,W,rH);
+  cx.strokeStyle='rgba(100,180,225,0.1)';cx.lineWidth=1;
+  for(let i=0;i<10;i++){const wx=(frameN*.7+i*W/10)%W;cx.beginPath();cx.moveTo(wx,rY+rH*.3);cx.quadraticCurveTo(wx+25,rY+rH*.55,wx+50,rY+rH*.3);cx.stroke();}
+  cx.strokeStyle='rgba(130,100,50,0.6)';cx.lineWidth=2;cx.beginPath();cx.moveTo(0,rY);cx.lineTo(W,rY);cx.stroke();
+  cx.strokeStyle='rgba(70,110,45,0.6)';cx.beginPath();cx.moveTo(0,rY+rH);cx.lineTo(W,rY+rH);cx.stroke();
+  // Rocks
+  for(const r of rocks){
+    cx.fillStyle='#4A3D2A';cx.beginPath();cx.ellipse(r.x,r.y,r.rx,r.ry,.3,0,Math.PI*2);cx.fill();
+    cx.fillStyle='rgba(255,255,255,0.07)';cx.beginPath();cx.ellipse(r.x-r.rx*.2,r.y-r.ry*.2,r.rx*.4,r.ry*.35,.3,0,Math.PI*2);cx.fill();
+  }
+  cx.fillStyle='rgba(100,185,225,0.45)';cx.font='bold 11px "DM Sans"';
+  cx.fillText('MARA RIVER',14,rY+rH/2+4);
+
+  // Migration route dotted
+  const pts=[[.27,.76],[.26,.62],[.20,.50],[.31,.36],[.50,.30],[.60,.25],[.63,.30],[.50,.40],[.40,.50],[.28,.65],[.27,.76]]
+    .map(([x,y])=>[x*W,y*H]);
+  cx.save();cx.setLineDash([4,8]);cx.strokeStyle='rgba(212,160,23,0.13)';cx.lineWidth=1.5;
+  cx.beginPath();cx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++)cx.lineTo(pts[i][0],pts[i][1]);
+  cx.stroke();cx.setLineDash([]);
+  // Herd position glow
+  const hx=lerp(MONTHS[curM].hx*W,MONTHS[(curM+1)%12].hx*W,monthP);
+  const hy=lerp(MONTHS[curM].hy*H,MONTHS[(curM+1)%12].hy*H,monthP);
+  cx.beginPath();cx.arc(hx,hy,22,0,Math.PI*2);cx.strokeStyle='rgba(212,160,23,0.32)';cx.lineWidth=2;cx.stroke();
+  cx.beginPath();cx.arc(hx,hy,11,0,Math.PI*2);cx.fillStyle='rgba(212,160,23,0.14)';cx.fill();
+  cx.restore();
+}
+
+// ── State ─────────────────────────────────────────────────────────────────
+let curM=0,monthP=0,autoPlay=false,simSpeed=1,lastT=0;
+
+function initBoids(){
+  boids.length=0;
+  const q=MONTHS[curM];
+  for(let i=0;i<BOID_N;i++) boids.push(new Boid(q.hx*W+(Math.random()-.5)*W*.32,q.hy*H+(Math.random()-.5)*H*.3));
+  for(let i=0;i<ZEB_N;i++) boids.push(new Boid(q.hx*W+(Math.random()-.5)*W*.26,q.hy*H+(Math.random()-.5)*H*.26,true));
+}
+
+function syncCrocs(){
+  crocs.length=0;
+  const q=MONTHS[curM],n=q.crocs;
+  const useGrum=[4,5].includes(curM);
+  const mc=useGrum?Math.ceil(n*.6):n,gc2=useGrum?Math.floor(n*.4):0;
+  for(let i=0;i<mc;i++)crocs.push(new Croc(null,null,false));
+  for(let i=0;i<gc2;i++)crocs.push(new Croc(null,null,true));
+}
+
+// ── UI ─────────────────────────────────────────────────────────────────────
+function buildStrip(){
+  document.getElementById('month-strip').innerHTML=
+    MONTHS.map((m,i)=>`<div class="month-cell${i===curM?' active':''}" onclick="jumpM(${i})"><span class="mo">${m.short}</span><div class="dot"></div></div>`).join('');
+}
+function updateUI(){
+  document.querySelectorAll('.month-cell').forEach((el,i)=>el.classList.toggle('active',i===curM));
+  const q=MONTHS[curM];
+  document.getElementById('info-month').textContent=q.name.toUpperCase();
+  document.getElementById('info-region').textContent=q.region;
+  document.getElementById('info-text').textContent=q.text;
+  const ev=document.getElementById('info-event');
+  if(q.event){ev.style.display='block';ev.textContent=q.event;ev.style.background=(q.eventColor||'#555')+'44';ev.style.borderColor=q.eventColor||'#D4A017';}
+  else ev.style.display='none';
+  document.getElementById('s-gnu').textContent=boids.filter(b=>!b.dead&&!b.isZ).length.toLocaleString();
+  document.getElementById('s-zeb').textContent=boids.filter(b=>!b.dead&&b.isZ).length.toLocaleString();
+  document.getElementById('s-croc').textContent=crocs.length;
+  document.getElementById('s-lion').textContent=lions.length;
+}
+
+// ── Loop ───────────────────────────────────────────────────────────────────
+function loop(ts){
+  const dt=Math.min((ts-lastT)/1000,.05)*simSpeed;
+  lastT=ts;
+  if(autoPlay){monthP+=dt*.035;if(monthP>=1){monthP=0;nextM();}}
+  const targetRain=[2,3,4,9,10].includes(curM)?0.85:0;
+  rainA+=(targetRain-rainA)*dt*1.5;
+  cx.clearRect(0,0,W,H);
+  drawScene();drawRain();
+  // Death flash
+  for(const b of boids){
+    if(b.dead&&b.dT>0){cx.save();cx.globalAlpha=b.dT*.8;cx.fillStyle='rgba(220,60,30,0.55)';cx.beginPath();cx.arc(b.x,b.y,7,0,Math.PI*2);cx.fill();cx.restore();b.dT-=dt;}
+  }
+  const alive=boids.filter(b=>!b.dead);
+  for(const b of alive)b.update(dt,curM);
+  alive.sort((a,b2)=>a.y-b2.y);
+  for(const b of alive){b.draw();if(b.spd>1.2&&!b.inMara&&!b.inGrum)spawnDust(b.x,b.y,b.vx,b.vy);}
+  tickDust(dt);
+  for(const c of crocs)c.update(dt);for(const c of crocs)c.draw();
+  for(const l of lions)l.update(dt);for(const l of lions)l.draw();
+  // Respawn
+  const dead=boids.filter(b=>b.dead&&b.dT<=0);
+  if(dead.length&&Math.random()<.025){const idx=boids.indexOf(dead[0]);const q=MONTHS[curM];boids[idx]=new Boid(q.hx*W+(Math.random()-.5)*W*.3,q.hy*H+(Math.random()-.5)*H*.28);}
+  if(frameN%5===0)updateUI();
+  requestAnimationFrame(loop);
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────
+let tool='lion';
+function setTool(t){
+  tool=t;
+  document.getElementById('btn-lion').classList.toggle('active',t==='lion');
+  document.getElementById('btn-croc').classList.toggle('active',t==='croc');
+  toast(t==='lion'?'🦁 Click on the plains to place a lion':'🐊 Click in a river to place a croc');
+}
+function nextM(){curM=(curM+1)%12;monthP=0;syncCrocs();updateUI();toast('▶ '+MONTHS[curM].name+' — '+MONTHS[curM].region);}
+function prevMonth(){curM=(curM+11)%12;monthP=0;syncCrocs();updateUI();toast('◀ '+MONTHS[curM].name+' — '+MONTHS[curM].region);}
+function nextMonth(){nextM();}
+function jumpM(m){curM=m;monthP=0;syncCrocs();updateUI();toast(MONTHS[m].name+' — '+MONTHS[m].region);}
+function toggleAuto(){autoPlay=!autoPlay;document.getElementById('btn-auto').textContent=autoPlay?'⏸ PAUSE':'⏵ AUTO';document.getElementById('btn-auto').classList.toggle('active',autoPlay);}
+function setSpeed(s){simSpeed=s;toast('Speed: '+s+'×');}
+function resetSim(){lions.length=0;initBoids();syncCrocs();monthP=0;toast('Reset — fresh herd of '+BOID_N+' wildebeest + '+ZEB_N+' zebras!');}
+
+cv.addEventListener('click',e=>{
+  const r=cv.getBoundingClientRect();
+  const x=e.clientX-r.left,y=e.clientY-r.top;
+  const{rY,rH,gY,gH}=mapData;
+  if(tool==='lion'){
+    if((y>rY-8&&y<rY+rH+8)||(y>gY-6&&y<gY+gH+6)){toast('Lions avoid rivers! Click on the plains.');return;}
+    lions.push(new Lion(x,y));toast('🦁 Lion placed!');
+  }else{
+    const inM=y>rY+4&&y<rY+rH-4,inG=y>gY+3&&y<gY+gH-3&&x<mapData.bX*.9;
+    if(!inM&&!inG){toast('Crocs live in rivers! Click the Mara or Grumeti.');return;}
+    crocs.push(new Croc(x,y,inG));toast('🐊 Crocodile placed!');
+  }
+});
+
+function toast(msg){
+  const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+resize();buildStrip();initBoids();syncCrocs();updateUI();
+toast('Follow the annual migration! Click month tabs or use NEXT/AUTO');
+requestAnimationFrame(ts=>{lastT=ts;requestAnimationFrame(loop);});
+</script>
+</body>
+</html>
